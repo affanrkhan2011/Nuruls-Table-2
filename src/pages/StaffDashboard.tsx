@@ -183,7 +183,10 @@ export default function StaffDashboard() {
                     }`}>
                       <div className="flex flex-col">
                          <div className="font-bold text-2xl text-ink leading-none">Table {order.table}</div>
-                         <div className="text-[10px] uppercase tracking-widest text-ink/40 mt-1 font-bold">New Order</div>
+                         <div className="flex items-center gap-2 mt-1">
+                           <div className="text-[10px] uppercase tracking-widest text-ink/40 font-bold">New Order</div>
+                           <div className="text-[10px] bg-ink text-white px-1.5 py-0.5 rounded font-bold">${order.subtotal.toFixed(2)}</div>
+                         </div>
                       </div>
                       <div className="flex flex-col items-end">
                         <div className="text-sm font-bold text-brown-dark bg-white px-2 py-0.5 rounded shadow-sm">{formatTime(order.timestamp)}</div>
