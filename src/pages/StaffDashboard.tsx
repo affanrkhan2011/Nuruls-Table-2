@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, CheckCircle, Eye, BellRing, Receipt } from 'lucide-react';
+import { Clock, CheckCircle, Eye, BellRing, Receipt, Trash2 } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, onSnapshot, doc, updateDoc, orderBy } from 'firebase/firestore';
 
@@ -33,6 +33,18 @@ export default function StaffDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [billRequests, setBillRequests] = useState<BillRequest[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
+  const [confirmingBillId, setConfirmingBillId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (confirmingOrderId || confirmingBillId) {
+      const timer = setTimeout(() => {
+        setConfirmingOrderId(null);
+        setConfirmingBillId(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [confirmingOrderId, confirmingBillId]);
 
   useEffect(() => {
     // Setup Firestore listeners
@@ -112,6 +124,15 @@ export default function StaffDashboard() {
       }
     } catch (error) {
       console.error('Failed to clear table and pay bill', error);
+    }
+  };
+
+  const archiveOrder = async (orderId: string) => {
+    try {
+      const orderRef = doc(db, 'orders', orderId);
+      await updateDoc(orderRef, { status: 'ARCHIVED' });
+    } catch (error) {
+      console.error('Failed to archive individual order', error);
     }
   };
 
@@ -224,16 +245,31 @@ export default function StaffDashboard() {
                     </ul>
                   </div>
                   
-                  {order.status === 'NEW' && (
-                    <div className="p-3 bg-black/5 border-t border-line flex gap-2">
+                  <div className="p-3 bg-black/5 border-t border-line flex gap-2">
+                    {order.status === 'NEW' && (
                       <button 
                         onClick={() => updateOrderStatus(order.id, 'SEEN')}
                         className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors"
                       >
                         <Eye className="w-4 h-4" /> Acknowledge
                       </button>
-                    </div>
-                  )}
+                    )}
+                    {confirmingOrderId === order.id ? (
+                      <button 
+                        onClick={() => { archiveOrder(order.id); setConfirmingOrderId(null); }}
+                        className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold animate-pulse shadow-inner"
+                      >
+                        Click to Confirm
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => setConfirmingOrderId(order.id)}
+                        className={`flex-1 ${order.status === 'NEW' ? 'bg-ink/10 text-ink/60 hover:bg-ink/20' : 'bg-ink text-white hover:bg-black'} py-2 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors`}
+                      >
+                        <Trash2 className="w-4 h-4" /> Clear Order
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -265,12 +301,21 @@ export default function StaffDashboard() {
                       <span>Total Due:</span>
                       <span className="font-bold text-lg">${req.total.toFixed(2)}</span>
                     </div>
-                    <button 
-                      onClick={() => updateBillStatus(req.id, req.table)}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors"
-                    >
-                      <Receipt className="w-4 h-4" /> Paid & Clear Table
-                    </button>
+                    {confirmingBillId === req.id ? (
+                      <button 
+                        onClick={() => { updateBillStatus(req.id, req.table); setConfirmingBillId(null); }}
+                        className="w-full bg-red-700 text-white py-2 rounded-lg font-bold animate-pulse shadow-inner"
+                      >
+                        Confirm Payment?
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => setConfirmingBillId(req.id)}
+                        className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors"
+                      >
+                        <Receipt className="w-4 h-4" /> Paid & Clear Table
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
