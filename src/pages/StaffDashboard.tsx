@@ -221,23 +221,16 @@ export default function StaffDashboard() {
                     </ul>
                   </div>
                   
-                  <div className="p-3 bg-black/5 border-t border-line flex gap-2">
-                    {order.status === 'NEW' ? (
+                  {order.status === 'NEW' && (
+                    <div className="p-3 bg-black/5 border-t border-line flex gap-2">
                       <button 
                         onClick={() => updateOrderStatus(order.id, 'SEEN')}
                         className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors"
                       >
                         <Eye className="w-4 h-4" /> Acknowledge
                       </button>
-                    ) : (
-                      <button 
-                        onClick={() => updateOrderStatus(order.id, 'DONE')}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors"
-                      >
-                        <CheckCircle className="w-4 h-4" /> Mark Done
-                      </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
