@@ -97,16 +97,25 @@ export default function StaffDashboard() {
     }
   };
 
-  const updateBillStatus = async (id: string, status: 'DELIVERED') => {
+  const updateBillStatus = async (id: string, table: string) => {
     try {
+      // 1. Mark the bill request as COMPLETED
       const billRef = doc(db, 'billRequests', id);
       await updateDoc(billRef, { status: 'COMPLETED' });
+
+      // 2. Find all non-archived orders for this table and mark them as ARCHIVED
+      // We do this so the table resets for the next customer
+      const tableOrders = orders.filter(o => o.table === table && o.status !== 'ARCHIVED');
+      for (const order of tableOrders) {
+        const orderRef = doc(db, 'orders', order.id);
+        await updateDoc(orderRef, { status: 'ARCHIVED' });
+      }
     } catch (error) {
-      console.error('Failed to update bill status', error);
+      console.error('Failed to clear table and pay bill', error);
     }
   };
 
-  const activeOrders = orders.filter(o => o.status !== 'DONE');
+  const activeOrders = orders.filter(o => o.status !== 'ARCHIVED');
   const activeBillRequests = billRequests.filter(r => r.status === 'PENDING');
 
   const formatTime = (isoString: string) => {
@@ -169,12 +178,18 @@ export default function StaffDashboard() {
                       : 'border-yellow-500/50'
                   }`}
                 >
-                  <div className={`p-3 flex justify-between items-center border-b ${
-                    order.status === 'NEW' ? 'bg-brown-light/10 border-brown-light/20' : 'bg-yellow-500/10 border-yellow-500/20'
-                  }`}>
-                    <div className="font-bold text-xl text-ink">Table {order.table}</div>
-                    <div className="text-sm text-ink/60">{formatTime(order.timestamp)}</div>
-                  </div>
+                    <div className={`p-3 flex justify-between items-center border-b ${
+                      order.status === 'NEW' ? 'bg-brown-light/10 border-brown-light/20' : 'bg-yellow-500/10 border-yellow-500/20'
+                    }`}>
+                      <div className="flex flex-col">
+                         <div className="font-bold text-2xl text-ink leading-none">Table {order.table}</div>
+                         <div className="text-[10px] uppercase tracking-widest text-ink/40 mt-1 font-bold">New Order</div>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <div className="text-sm font-bold text-brown-dark bg-white px-2 py-0.5 rounded shadow-sm">{formatTime(order.timestamp)}</div>
+                        <div className="text-[10px] text-ink/40 mt-1 uppercase">Received</div>
+                      </div>
+                    </div>
                   
                   <div className="p-4 flex-1">
                     <ul className="space-y-3">
@@ -255,10 +270,10 @@ export default function StaffDashboard() {
                       <span className="font-bold text-lg">${req.total.toFixed(2)}</span>
                     </div>
                     <button 
-                      onClick={() => updateBillStatus(req.id, 'DELIVERED')}
-                      className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors"
+                      onClick={() => updateBillStatus(req.id, req.table)}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors"
                     >
-                      <Receipt className="w-4 h-4" /> Bill Delivered
+                      <Receipt className="w-4 h-4" /> Paid & Clear Table
                     </button>
                   </div>
                 ))}

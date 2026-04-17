@@ -28,13 +28,21 @@ export default function CustomerApp() {
     if (isTableConfirmed && tableNumber) {
       const q = query(
         collection(db, 'orders'),
-        where('table', '==', tableNumber)
+        where('table', '==', tableNumber),
+        where('status', '!=', 'ARCHIVED')
       );
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
         setTableOrders(orders);
-        if (orders.length > 0) setHasOrdered(true);
+        if (orders.length > 0) {
+          setHasOrdered(true);
+        } else {
+          setHasOrdered(false);
+          if (activeCategory === 'My Orders') {
+            setActiveCategory(MENU_CATEGORIES[0]);
+          }
+        }
       }, (error) => {
         console.error('Firestore Error (orders):', error);
       });
@@ -47,13 +55,14 @@ export default function CustomerApp() {
     if (isTableConfirmed && tableNumber) {
       const q = query(
         collection(db, 'billRequests'),
-        where('table', '==', tableNumber)
+        where('table', '==', tableNumber),
+        where('status', '==', 'PENDING')
       );
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const requests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
-        const myRequest = requests.find(r => r.status === 'PENDING');
-        if (myRequest) {
+        // If there's a pending request, set status to requested
+        if (requests.length > 0) {
           setBillStatus('requested');
         } else {
           setBillStatus('idle');
